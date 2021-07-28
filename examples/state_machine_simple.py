@@ -32,6 +32,7 @@ class Bar(smach.State):
 
 # main
 def main():
+    # print('wtf??') # ROS_IP is set wrong
     rospy.init_node('smach_example_state_machine')
 
     # Create a SMACH state machine
