@@ -19,7 +19,8 @@ import rospy
 import threading
 
 import smach
-from smach import StateMachine, ServiceState, SimpleActionState, IntrospectionServer
+from smach import StateMachine
+from smach_ros import ServiceState, SimpleActionState, IntrospectionServer
 
 import std_srvs.srv
 import turtlesim.srv

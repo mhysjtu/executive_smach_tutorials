@@ -45,7 +45,9 @@ import threading
 from math import sqrt, pow
 
 import smach
-from smach import StateMachine, ServiceState, SimpleActionState, MonitorState, IntrospectionServer, Concurrence
+from smach import *
+#from smach import StateMachine, ServiceState, SimpleActionState, MonitorState, IntrospectionServer, Concurrence
+from smach_ros import *
 
 import std_srvs.srv
 import turtlesim.srv
