@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 """
 Description:
-
+    smach_viewer
+    states are represented by ovals, and their outcomes are represented by directed edges. The outcomes of the container "sm_root" are shown in red.
+    
+    It is a good convention to capitalize state names, to write outcomes in lower case, and to use underscores where multiple words are present in a name
 Usage:
     $> roslaunch turtle_nodes.launch
     $> ./executive_step_02.py

@@ -45,9 +45,9 @@ import threading
 from math import sqrt, pow
 
 import smach
-from smach import *
-#from smach import StateMachine, ServiceState, SimpleActionState, MonitorState, IntrospectionServer, Concurrence
-from smach_ros import *
+from smach import StateMachine, Concurrence
+from smach_ros import ServiceState, SimpleActionState, MonitorState, IntrospectionServer
+from smach_ros.util import set_preempt_handler
 
 import std_srvs.srv
 import turtlesim.srv
@@ -144,7 +144,7 @@ def main():
     sis.start()
 
     # Set preempt handler
-    smach.set_preempt_handler(sm0)
+    set_preempt_handler(sm0)
 
     # Execute SMACH tree in a separate thread so that we can ctrl-c the script
     smach_thread = threading.Thread(target = sm0.execute)
@@ -152,6 +152,23 @@ def main():
 
     # Signal handler
     rospy.spin()
+
+
+# Wrap SMACH Executive Into An Action
+    # Remove execute call
+    # Add wrapping code
+    # Create a python script that calls the action
+    # Run 
+'''
+asw = ActionServerWrapper(
+        'smach_usecase_server', actionlib_msgs.msg.GoalID,
+        wrapped_container = sm_root,
+        succeeded_outcomes = ['succeeded'],
+        aborted_outcomes = ['aborted'],
+        preempted_outcomes = ['preempted'])
+aws.run_server()
+rospy.spin()    
+'''
 
 if __name__ == '__main__':
     main()

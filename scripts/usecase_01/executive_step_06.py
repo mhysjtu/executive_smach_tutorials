@@ -45,8 +45,9 @@ import threading
 from math import sqrt, pow
 
 import smach
-from smach import *#StateMachine, ServiceState, SimpleActionState, MonitorState, IntrospectionServer, Concurrence
-from smach_ros import *
+from smach import StateMachine, Concurrence
+from smach_ros import ServiceState, SimpleActionState, IntrospectionServer, MonitorState
+from smach_ros.util import set_preempt_handler
 
 import std_srvs.srv
 import turtlesim.srv
@@ -129,7 +130,7 @@ def main():
     sis.start()
 
     # Set preempt handler
-    smach.set_preempt_handler(sm0)
+    set_preempt_handler(sm0)
 
     # Execute SMACH tree in a separate thread so that we can ctrl-c the script
     smach_thread = threading.Thread(target = sm0.execute)
