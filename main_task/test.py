@@ -22,6 +22,7 @@ from smach_ros.util import set_preempt_handler
 import std_srvs.srv
 # 需要source才能找到自定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
+from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal
 
 #std_srvs.srv.SetBoolRequest
 # from iiwa_msgs.msg import ControlMode
@@ -221,21 +222,15 @@ def main():
                 ServiceState('hangdian/gripper1/control_service_req', std_srvs.srv.SetBool,
                     request = lever_req,
                     response_cb=lever_response_cb),
-                transitions = {'succeeded':'IMAGE_DETECT'},# succeeded should be TASK_M in real
+                transitions = {'succeeded':'TASK_MANAGER'},# succeeded should be TASK_M in real
                 remapping = {'lever_input':'ud_index_of_button', 'result':'final_result'} # userdata in viewer are only ud_xxx and final_xxx
                 )
         else:
-            # @smach.cb_interface(output_keys=['result'], outcomes=['succeeded'])
-            # def lever_response_cb(userdata, response):
-            #     userdata.result = response.success
-            #     print(userdata.result)
-            #     return
-            ###### to be modified to Action by lzq ######
             StateMachine.add('DETECT_LEVER',
-                ServiceState('detect_lever', std_srvs.srv.Trigger,
-                    request_slots = ['button_index']),
-                transitions = {'succeeded':'IMAGE_DETECT'},# succeeded should be TASK_M in real
-                remapping = {'button_index':'ud_index_of_button'})
+                SimpleActionState('airhandle_server', LeverDetectAction,
+                    goal_slots = ['handle_command']),
+                transitions = {'succeeded':'RECOGNITION'},# succeeded should be TASK_M in real
+                remapping = {'handle_command':'ud_index_of_button'})
 
 
         # 4. 视觉识别（嵌套状态机）
@@ -244,23 +239,36 @@ def main():
             ## 4.1 到观测位置
             # arm approach panel
             if test:
+                def observe_response_cb(userdata, response):
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('OBSERVE_POSITION',
                     ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
-                        response_slots=['message']),
+                        response_slots=['message'],
+                        response_cb=observe_response_cb),
                     transitions = {'succeeded':'YOLOICP'})
             else:
                 ####### to be modified to Action by mhy ###### 
                 StateMachine.add('OBSERVE_POSITION',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
-                        request_slots = ['observe_button_input']),
+                    SimpleActionState('large_move_server', std_srvs.srv.Trigger,
+                        goal_slots = ['button_index']),
                     transitions = {'succeeded':'YOLOICP'},
-                    remapping = {'observe_button_input':'ud_index_of_button'})
+                    remapping = {'button_index':'ud_index_of_button'})
+
             ## 4.2 YOLO-ICP
             # yolo icp for button localization
             if test:
+                def yolo_response_cb(userdata, response):
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('YOLOICP',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger),
-                    remapping={'succeeded':'SVM'})
+                    ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
+                        response_cb=yolo_response_cb),
+                    transitions={'succeeded':'SVM'})
             else:
                 StateMachine.add('YOLOICP',
                     ServiceState('/yolo_icp_pose', ButtonDetectPose,
@@ -271,8 +279,14 @@ def main():
 
             ## 4.3 状态识别（也许可以和4.2并行？）
             if test:
+                def svm_response_cb(userdata, response):
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('SVM',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger),
+                    ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
+                        response_cb=svm_response_cb),
                     {'succeeded':'succeeded'})
             else:
                 StateMachine.add('SVM',
@@ -285,16 +299,22 @@ def main():
         
         # 5. 机械臂检测(大action)
         if test:
+            def arm_response_cb(userdata, response):
+                if response.success == True:
+                    return
+                else:
+                    return
             StateMachine.add('ARM_DETECT', 
-                ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger), 
-                transitions = {'succeeded':'succeeded', 'aborted':'ARM_DETECT', 'preempted':'ARM_DETECT'})# succeeded should be TASK_M in real
+                ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+                    response_cb=arm_response_cb), 
+                transitions = {'succeeded':'TASK_MANAGER'})# succeeded should be TASK_M in real
         else:
             ####### to be modified to Action by mhy ######
             StateMachine.add('ARM_DETECT', 
-                ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
-                        request_slots = ['arm_input_pose', 'arm_input_status']), 
+                SimpleActionState('detect_with_arm_gripper', std_srvs.srv.Trigger,
+                        goal_slots = ['button_index', 'pose_in_camera', 'button_state']), 
                 transitions = {'succeeded':'succeeded', 'aborted':'ARM_DETECT', 'preempted':'ARM_DETECT'},# succeeded should be TASK_M in real
-                remapping = {'arm_input_pose':'ud_index_of_button', 'arm_input_status':'ud_status'})
+                remapping = {'button_index':'ud_index_of_button', 'pose_in_camera':'ud_pose', 'button_state':'ud_status'})
         
         # 6. 图像识别（嵌套状态机，操作后即可并行）
         image_detect = StateMachine(outcomes=['succeeded','aborted','preempted'])
@@ -302,33 +322,46 @@ def main():
             ## 6.1 到观测位置（如果需要）
             # arm go to observe position
             if test:
+                def ob_image_response_cb(userdata, response):
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('OBSERVE_IMAGE',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger),
+                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+                        response_cb=ob_image_response_cb),
                     {'succeeded':'DETECT_IMAGE'})
             else:
                 ####### to be modified to Action by mhy ######
+                # 需要判断是否需要到观测位置，如果不用就不调用largemove action
                 StateMachine.add('OBSERVE_IMAGE',
-                    ServiceState('iiwa/move_to_cartesian_pose_lin', std_srvs.srv.Trigger,
-                        request_slots = ['observe_image_input']),
+                    SimpleActionState('large_move_server', std_srvs.srv.Trigger,
+                        goal_slots = ['button_index']),
                     transitions = {'succeeded':'DETECT_IMAGE'},
-                    remapping = {'observe_image_input':'ud_index_of_button'})
+                    remapping = {'button_index':'ud_index_of_button'})
 
             ## 6.2 图像识别
             ## 成功--> 回到2. 任务管理器
             # arm go to observe position
             if test:
+                def image_response_cb(userdata, response):
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('DETECT_IMAGE',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger),
-                    {'succeeded':'succeeded', 'aborted':'DETECT_IMAGE', 'preempted':'DETECT_IMAGE'})
+                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+                        response_cb=image_response_cb),
+                    {'succeeded':'succeeded'})
             else:
                 ####### to be modified to service by npy ######
                 StateMachine.add('DETECT_IMAGE',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+                    ServiceState('digits_pre', std_srvs.srv.Trigger,
                         request_slots = ['screen_input_list'],
                         response_slots = ['screen_output']),
                     transitions = {'succeeded':'succeeded', 'aborted':'DETECT_IMAGE', 'preempted':'DETECT_IMAGE'},
-                    remapping = {'yoloicp_input_list':'ud_index_of_button', 'screen_output':'ud_screen_output'})
-        StateMachine.add('IMAGE_DETECT', image_detect, {'succeeded':'succeeded'})
+                    remapping = {'screen_input_list':'ud_index_of_button', 'screen_output':'ud_screen_output'})
+        StateMachine.add('IMAGE_DETECT', image_detect, {'succeeded':'TASK_MANAGER'})
 
     # Attach a SMACH introspection server
     sis = IntrospectionServer('smach_demo_1', sm0, '/USE_CASE')
