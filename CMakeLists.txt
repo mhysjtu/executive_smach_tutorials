@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(smach_tutorials)
 
-find_package(catkin REQUIRED COMPONENTS actionlib_msgs)
+find_package(catkin REQUIRED COMPONENTS 
+  actionlib_msgs
+  hangdian_msgs
+)
 
 ## Generate actions in the 'action' folder
 add_action_files(
@@ -26,7 +29,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES lib
-#  CATKIN_DEPENDS packages
+  CATKIN_DEPENDS hangdian_msgs
 #  DEPENDS system_lib
 )
 

@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/mhy/aircraft_ws/devel/include/**",
+                "/opt/ros/kinetic/include/**",
+                "/home/mhy/aircraft_ws/src/hangdian_detection/hangdian_arm_controllers/iiwa_stack/detect_button/include/**",
+                "/home/mhy/aircraft_ws/src/hangdian_detection/hangdian_arm_controllers/gripper_controllers/include/**",
+                "/home/mhy/aircraft_ws/src/hangdian_detection/hangdian_arm_controllers/iiwa_stack/iiwa_hw/include/**",
+                "/home/mhy/aircraft_ws/src/hangdian_detection/hangdian_arm_controllers/iiwa_stack/iiwa_ros/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
