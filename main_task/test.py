@@ -20,9 +20,10 @@ from smach_ros import ServiceState, SimpleActionState, IntrospectionServer
 from smach_ros.util import set_preempt_handler
 
 import std_srvs.srv
+from geometry_msgs.msg import Pose
 # 需要source才能找到自定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
-from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal
+from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal
 
 #std_srvs.srv.SetBoolRequest
 # from iiwa_msgs.msg import ControlMode
@@ -297,17 +298,31 @@ def main():
                     remapping = {'button_index':'ud_index_of_button', 'state':'ud_status'})
         StateMachine.add('RECOGNITION',button_detect, {'succeeded':'ARM_DETECT'})
         
+        poseInCamera = Pose()
+        poseInCamera.position.x = 0.0
+        poseInCamera.position.y = 0.0
+        poseInCamera.position.z = 0.35
+        poseInCamera.orientation.w = 1.0
+        poseInCamera.orientation.x = 0.0
+        poseInCamera.orientation.y = 0.0
+        poseInCamera.orientation.z = 0.0
+        
+        manipulateGoal = ButtonManipulateGoal(button_index = "1", pose_in_camera = poseInCamera, button_state = 2)
         # 5. 机械臂检测(大action)
         if test:
-            def arm_response_cb(userdata, response):
-                if response.success == True:
-                    return
-                else:
-                    return
+            # def arm_response_cb(userdata, response):
+            #     if response.success == True:
+            #         return
+            #     else:
+            #         return
+            # StateMachine.add('ARM_DETECT', 
+            #     ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+            #         response_cb=arm_response_cb), 
+            #     transitions = {'succeeded':'TASK_MANAGER'})# succeeded should be TASK_M in real
             StateMachine.add('ARM_DETECT', 
-                ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
-                    response_cb=arm_response_cb), 
-                transitions = {'succeeded':'TASK_MANAGER'})# succeeded should be TASK_M in real
+                SimpleActionState('detect_with_arm_gripper', ButtonManipulateAction, goal = manipulateGoal), 
+                transitions = {'succeeded':'succeeded'})
+            
         else:
             ####### to be modified to Action by mhy ######
             StateMachine.add('ARM_DETECT', 
