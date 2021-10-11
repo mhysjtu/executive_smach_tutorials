@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #-*- coding: UTF-8 -*-
 """
 Description:
@@ -24,6 +24,7 @@ from geometry_msgs.msg import Pose
 # 需要source才能找到自定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
 from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal
+from added_srv.srv import ScreenDetect, ScreenDetectRequest
 
 #std_srvs.srv.SetBoolRequest
 # from iiwa_msgs.msg import ControlMode
@@ -208,24 +209,30 @@ def main():
         # 3. 操纵杆检测
         # check if sensors are OK
         if test:
-            lever_req = std_srvs.srv.SetBoolRequest()
-            lever_req.data = True
-            @smach.cb_interface(input_keys=['lever_input'], output_keys=['result'], outcomes=['succeeded'])
-            def lever_response_cb(userdata, response):
-                if userdata.lever_input == 'lever':
-                    userdata.result = True
-                else:
-                    userdata.result = False
-                # status = userdata.result # 除了不能print output_keys, 别的也没问题了
-                # print userdata.final_result
-                return
+            # lever_req = std_srvs.srv.SetBoolRequest()
+            # lever_req.data = True
+            # @smach.cb_interface(input_keys=['lever_input'], output_keys=['result'], outcomes=['succeeded'])
+            # def lever_response_cb(userdata, response):
+            #     if userdata.lever_input == 'lever':
+            #         userdata.result = True
+            #     else:
+            #         userdata.result = False
+            #     # status = userdata.result # 除了不能print output_keys, 别的也没问题了
+            #     # print userdata.final_result
+            #     return
+            # StateMachine.add('DETECT_LEVER',
+            #     ServiceState('hangdian/gripper1/control_service_req', std_srvs.srv.SetBool,
+            #         request = lever_req,
+            #         response_cb=lever_response_cb),
+            #     transitions = {'succeeded':'TASK_MANAGER'},# succeeded should be TASK_M in real
+            #     remapping = {'lever_input':'ud_index_of_button', 'result':'final_result'} # userdata in viewer are only ud_xxx and final_xxx
+            #     )
+            leverGoal = LeverDetectGoal()
+            leverGoal.handle_command = "JSA"
             StateMachine.add('DETECT_LEVER',
-                ServiceState('hangdian/gripper1/control_service_req', std_srvs.srv.SetBool,
-                    request = lever_req,
-                    response_cb=lever_response_cb),
-                transitions = {'succeeded':'TASK_MANAGER'},# succeeded should be TASK_M in real
-                remapping = {'lever_input':'ud_index_of_button', 'result':'final_result'} # userdata in viewer are only ud_xxx and final_xxx
-                )
+                SimpleActionState('air_handle', LeverDetectAction,
+                    goal = leverGoal),
+                transitions = {'succeeded':'TASK_MANAGER'})
         else:
             StateMachine.add('DETECT_LEVER',
                 SimpleActionState('airhandle_server', LeverDetectAction,
@@ -310,18 +317,18 @@ def main():
         manipulateGoal = ButtonManipulateGoal(button_index = "1", pose_in_camera = poseInCamera, button_state = 2)
         # 5. 机械臂检测(大action)
         if test:
-            # def arm_response_cb(userdata, response):
-            #     if response.success == True:
-            #         return
-            #     else:
-            #         return
-            # StateMachine.add('ARM_DETECT', 
-            #     ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
-            #         response_cb=arm_response_cb), 
-            #     transitions = {'succeeded':'TASK_MANAGER'})# succeeded should be TASK_M in real
-            StateMachine.add('ARM_DETECT', 
-                SimpleActionState('detect_with_arm_gripper', ButtonManipulateAction, goal = manipulateGoal), 
-                transitions = {'succeeded':'succeeded'})
+             def arm_response_cb(userdata, response):
+                 if response.success == True:
+                     return
+                 else:
+                     return
+             StateMachine.add('ARM_DETECT', 
+                 ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+                     response_cb=arm_response_cb), 
+                 transitions = {'succeeded':'TASK_MANAGER'})# succeeded should be TASK_M in real
+            #StateMachine.add('ARM_DETECT', 
+            #    SimpleActionState('detect_with_arm_gripper', ButtonManipulateAction, goal = manipulateGoal), 
+            #    transitions = {'succeeded':'succeeded'})
             
         else:
             ####### to be modified to Action by mhy ######
@@ -358,14 +365,21 @@ def main():
             ## 6.2 图像识别
             ## 成功--> 回到2. 任务管理器
             # arm go to observe position
+            imageDetect = ScreenDetectRequest()
+            imageDetect.category = 14
+            # imageDetect.panel_index = None
+            # imageDetect.target_index = None
+            # imageDetect.context = None
+
             if test:
                 def image_response_cb(userdata, response):
-                    if response.success == True:
+                    if response.result == True:
                         return
                     else:
                         return
                 StateMachine.add('DETECT_IMAGE',
-                    ServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
+                    ServiceState('/ScreenDetect', ScreenDetect,
+                        request = imageDetect,
                         response_cb=image_response_cb),
                     {'succeeded':'succeeded'})
             else:
