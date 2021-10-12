@@ -11,6 +11,7 @@ Usage:
         $> rosrun smach_viewer smach_viewer.py
 """
 
+from numpy.core.numeric import require
 import rospy
 import threading
 
@@ -266,15 +267,27 @@ def main():
                     remapping = {'button_index':'ud_index_of_button'})
 
             ## 4.2 YOLO-ICP
+            poseDetect = ButtonDetectPoseRequest()
+            poseDetect.button_index = ''
             # yolo icp for button localization
             if test:
+                # def yolo_response_cb(userdata, response):
+                #     if response.success == True:
+                #         return
+                #     else:
+                #         return
+                # StateMachine.add('YOLOICP',
+                #     ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
+                #         response_cb=yolo_response_cb),
+                #     transitions={'succeeded':'SVM'})
                 def yolo_response_cb(userdata, response):
                     if response.success == True:
                         return
                     else:
                         return
                 StateMachine.add('YOLOICP',
-                    ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
+                    ServiceState('/yolo_icp_pose', ButtonDetectPose,
+                        request = poseDetect,
                         response_cb=yolo_response_cb),
                     transitions={'succeeded':'SVM'})
             else:
@@ -286,14 +299,21 @@ def main():
                     remapping = {'button_index':'ud_index_of_button', 'pose_in_camera':'ud_pose'})
 
             ## 4.3 状态识别（也许可以和4.2并行？）
+            stateDetect = ButtonDetectStateRequest()
+            stateDetect.button_index = ''
             if test:
                 def svm_response_cb(userdata, response):
                     if response.success == True:
                         return
                     else:
                         return
+                # StateMachine.add('SVM',
+                #     ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
+                #         response_cb=svm_response_cb),
+                #     {'succeeded':'succeeded'})
                 StateMachine.add('SVM',
-                    ServiceState('hangdian/gripper1/control_service',std_srvs.srv.Trigger,
+                    ServiceState('/svm', ButtonDetectState,
+                        request=stateDetect,
                         response_cb=svm_response_cb),
                     {'succeeded':'succeeded'})
             else:

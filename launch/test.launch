@@ -2,4 +2,6 @@
 <launch>
     <node name="empty_service" pkg="gripper_controllers" type="empty_service_node.py" output="screen" />
     <node name="req_service" pkg="gripper_controllers" type="req_service_node.py" output="screen"/>
+    <node name="state_service" pkg="hangdian" type="svmtest.py" output="screen"/>
+    <node name="pose_service" pkg="hangdian" type="hds.py" output="screen"/>
 </launch>
