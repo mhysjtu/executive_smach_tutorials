@@ -7,20 +7,20 @@ import random
 
 def handle_request(req):
     print("Returning")
-    # index = random.randint(1,3)
-    index = 1
+    index = random.randint(1,3)
+    # index = 3
     if index == 1:
         print("this is button")
         rospy.sleep(1)
-        return [True,"button"]
+        return [True,"1"]
     elif index == 2:
         print("this is lever")
         rospy.sleep(1)
-        return [True,"lever"]
+        return [True,"2"]
     elif index == 3:
         print("this is screen")
         rospy.sleep(1)
-        return [True,"screen"]
+        return [True,"3"]
     else :
         print("this is nothing")
         rospy.sleep(1)
