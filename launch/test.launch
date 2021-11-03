@@ -2,18 +2,20 @@
 <launch>
 
     <node name="empty_service" pkg="smach_tutorials" type="empty_service_node.py" output="screen" />
+    <!-- <node name="task_manager" pkg="task_parser" type="test_task_manager" output="screen" /> -->
     
-    <param name = "/iiwa/toolName" type="string" value = "ElectricGripperY"/>
+    <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>
     <node name="publish_eye_in_hand" pkg="calibration" type="publish_eye_in_hand" output="screen"/>
     
 
-    <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
-        <arg name="filters"         value="pointcloud"/>
-        <arg name="align_depth"     value="true"/>
-    </include>
     <node name="state_service" pkg="hangdian" type="svmtest.py" output="screen"/>
     <node name="pose_service" pkg="hangdian" type="hds.py" output="screen"/>
+    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
+        <arg name="filters"         value="pointcloud"/>
+        <arg name="align_depth"     value="true"/>
+    </include> -->
 
     <node name="linemod2D_service" pkg="shape_based_matching" type="shape_based_matching_hangdian_test" output="screen"/>
     <node name="screen_service" pkg="template_matching" type="hangdian_ros.py" output="screen"/>
+
 </launch>

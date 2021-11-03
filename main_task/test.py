@@ -24,8 +24,8 @@ import std_srvs.srv
 from geometry_msgs.msg import Pose
 # 需要source才能找到自定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
+from hangdian_msgs.srv import ScreenDetect, ScreenDetectRequest, TaskManage, TaskManageResponse
 from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal
-from added_srv.srv import ScreenDetect, ScreenDetectRequest
 
 #std_srvs.srv.SetBoolRequest
 # from iiwa_msgs.msg import ControlMode

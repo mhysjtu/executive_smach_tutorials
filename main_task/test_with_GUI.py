@@ -11,10 +11,13 @@ Usage:
         $> rosrun smach_viewer smach_viewer.py
 """
 
+from re import U
 from time import sleep, time
+from actionlib.action_client import TerminalState
 import rospy
 import actionlib
 import threading
+import random
 
 import smach
 from smach import StateMachine, State
@@ -25,7 +28,9 @@ import std_srvs.srv
 from geometry_msgs.msg import Pose
 # 需要source才能找到�?定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
-from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal, CentralControlRunAction, CentralControlRunResult, CentralControlRunFeedback
+from hangdian_msgs.srv import ScreenDetect, ScreenDetectRequest, TaskManage, TaskManageResponse
+from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal
+from hangdian_msgs.msg import CentralControlRunAction, CentralControlRunResult, CentralControlRunFeedback
 
 #std_srvs.srv.SetBoolRequest
 # from iiwa_msgs.msg import ControlMode
@@ -34,126 +39,57 @@ from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipula
 
 central_control_action_result = False
 
-
-class mhyServiceState(ServiceState):
-    def __init__(self, service_name, service_spec,
-            # Request Policy
-            request = None,
-            request_cb = None,
-            request_cb_args = [],
-            request_cb_kwargs = {},
-            request_key = None,
-            request_slots = [],
-            # Response Policy
-            response_cb = None,
-            response_cb_args = [],
-            response_cb_kwargs = {},
-            response_key = None,
-            response_slots = [],
-            # Keys
-            input_keys = [],
-            output_keys = [],
-            outcomes = [],
-            ):
-        # ServiceState.__init__(
-        #     self，serviceName, serviceType, outcomes=['succeeded', 'aborted','preempted', 'lever','button'])
-        State.__init__(self, 
-            outcomes=['succeeded', 'aborted', 'preempted', 'lever', 'button', 'screen'])
-        # Store Service info
-        self._service_name = service_name
-        self._service_spec = service_spec
-
-        self._proxy = None
-
-        # Store request policy
-        if request is None:
-            self._request = service_spec._request_class()
-        else:
-            self._request = request
-
-        
-        if request_cb is not None and not hasattr(request_cb, '__call__'):
-            raise smach.InvalidStateError("Request callback object given to ServiceState that IS NOT a function object")
-
-        self._request_cb = request_cb
-        self._request_cb_args = request_cb_args
-        self._request_cb_kwargs = request_cb_kwargs
-        if smach.has_smach_interface(request_cb):
-            self._request_cb_input_keys = request_cb.get_registered_input_keys()
-            self._request_cb_output_keys = request_cb.get_registered_output_keys()
-
-            self.register_input_keys(self._request_cb_input_keys)
-            self.register_output_keys(self._request_cb_output_keys)
-        else:
-            self._request_cb_input_keys = input_keys
-            self._request_cb_output_keys = output_keys
-
-        self._request_key = request_key
-        if request_key is not None:
-            self.register_input_keys([request_key])
-
-        self._request_slots = request_slots
-        self.register_input_keys(request_slots)
-
-        # Store response policy
-        if response_cb is not None and not hasattr(response_cb, '__call__'):
-            raise smach.InvalidStateError("Response callback object given to ServiceState that IS NOT a function object")
-
-        self._response_cb = response_cb
-        self._response_cb_args = response_cb_args
-        self._response_cb_kwargs = response_cb_kwargs
-        if smach.has_smach_interface(response_cb):
-            self._response_cb_input_keys = response_cb.get_registered_input_keys()
-            self._response_cb_output_keys = response_cb.get_registered_output_keys()
-            self._response_cb_outcomes = response_cb.get_registered_outcomes()
-
-            self.register_input_keys(self._response_cb_input_keys)
-            self.register_output_keys(self._response_cb_output_keys)
-            self.register_outcomes(self._response_cb_outcomes)
-        else:
-            self._response_cb_input_keys = input_keys
-            self._response_cb_output_keys = output_keys
-            self._response_cb_outcomes = outcomes
-
-        # Register additional input and output keys
-        self.register_input_keys(input_keys)
-        self.register_output_keys(output_keys)
-        self.register_outcomes(outcomes)
-
-        self._response_key = response_key
-        if response_key is not None:
-            self.register_output_keys([response_key])
-
-        self._response_slots = response_slots
-        self.register_output_keys(response_slots)
-
-    def execute(self, ud):
-        return super(mhyServiceState, self).execute(ud)
-
 class TaskServiceCB(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=['succeeded','aborted', 'lever', 'button', 'screen'], output_keys=['index_of_button'])
+        smach.State.__init__(self, outcomes=['succeeded', 'aborted', 'lever', 'button', 'screen'],
+                             output_keys=['operation_info', 'operate_type', 'panel', 'objects'])
         self.outcome = 'succeeded'
-        self.index_of_button = None
     def execute(self, userdata):
-        feedback.smach_info = 'task manager'
-        actionServer.publish_feedback(feedback)
+        actionFeedback.smach_info = 'task manager'
+        actionServer.publish_feedback(actionFeedback)
         self.outcome= 'succeeded'
-        rospy.wait_for_service('hangdian/smach/empty_service')
+        rospy.wait_for_service('/hangdian/task_manager_service')
         try:
-            get_button_index = rospy.ServiceProxy('hangdian/smach/empty_service', std_srvs.srv.Trigger)
-            response = get_button_index()
-            userdata.index_of_button = response.message
-            if response.message =='button':
-                print("detect button !!!")
-                self.outcome = 'button'
-            elif response.message =='lever':
-                print("detect lever !!!")
-                self.outcome = 'lever'
-            elif response.message =='screen':
-                print("detect screen !!!")
-                self.outcome = 'screen'
-                actionServer.set_succeeded(result)
+            getTask = rospy.ServiceProxy('/hangdian/task_manager_service', TaskManage)
+            taskResponse = getTask()
+            have_task = taskResponse.have_task
+            if not have_task:
+                print("All task have been completed !!!")
+                self.outcome = 'succeeded'
+                global central_control_action_result
+                central_control_action_result = True
+                actionFeedback.smach_info = 'task finished'
+                actionServer.publish_feedback(actionFeedback)
+                return self.outcome
+            else:
+                #最后会是一个函数，输入service返回的response——字符串，得到操作种类、面板序号、开关种类、开关序号：
+                print(taskResponse.module)
+                # userdata.operation_info = [taskResponse.panel, taskResponse.operate_type, taskResponse.objects]
+                # # userdata.module = taskResponse.module
+                userdata.operate_type = taskResponse.operate_type
+                userdata.panel = taskResponse.panel
+                userdata.objects = taskResponse.objects
+                
+                if taskResponse.module == 1:
+                    print("To detect button !!!")
+                    self.outcome = 'button'
+                    userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
+                        int(taskResponse.objects[0])]
+                    #if userdata.operate_type == 4:
+                    #   userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type)]
+                    #   for i in taskResponse.objects
+                    #       userdata.operation_info.push(int(i))
+                elif taskResponse.module == 2:
+                    print("To detect lever !!!")
+                    self.outcome = 'lever'
+                    userdata.operation_info = [taskResponse.panel, int(taskResponse.operate_type), 
+                        int(taskResponse.objects[0])]
+                    # print(userdata.operation_info)
+                elif taskResponse.module == 3:
+                    print("To detect screen !!!")
+                    self.outcome = 'screen'
+                    userdata.operation_info = [taskResponse.panel, taskResponse.operate_type, taskResponse.objects]
+                
             return self.outcome
         except rospy.ServiceException as e:
             print("Service call failed: %s"%e)
@@ -163,7 +99,7 @@ class TaskServiceCB(smach.State):
 def execute(goal):
     global central_control_action_result
     
-    test = True
+    test = False
 
     # Create a SMACH state machine
     sm0 = StateMachine(outcomes=['succeeded','aborted','preempted'])
@@ -171,19 +107,19 @@ def execute(goal):
     # Open the container
     with sm0:
         # 0. �?�?�?
-        global feedback
-        feedback = CentralControlRunFeedback()
-        global result
-        result = CentralControlRunResult()
-        result.result = True
+        global actionFeedback
+        actionFeedback = CentralControlRunFeedback()
+        global actionResult
+        actionResult = CentralControlRunResult()
+        actionResult.result = True
 
         # 1. �?检
         # check if sensors are OK
         StateMachine.add('CHECK',
                 ServiceState('hangdian/smach/empty_service', std_srvs.srv.Trigger),
                 {'succeeded':'TASK_MANAGER', 'aborted':'aborted'})
-        feedback.smach_info = 'self check'
-        actionServer.publish_feedback(feedback)
+        actionFeedback.smach_info = 'self check'
+        actionServer.publish_feedback(actionFeedback)
 
 
         # 2. 任务管理�?
@@ -191,74 +127,89 @@ def execute(goal):
         ## 任务完成，则到总sm的succeed状�?
         # check if sensors are OK
         if test:
-            # def task_response_cb(userdata, response):
-            #     # 要用userdata, 必须输入input，和action的result cb不一�?
-            #     # 如果要输出data�?能需要用@smach.cb_interface:
-            #         # @smach.cb_interface(input_keys=['pose_index', 'look_poses'], outcomes=['succeeded'])
-            #         # def robot_goal_cb(userdata, goal):
-            #         #     goal = RobotMoveGoal(userdata.look_poses[userdata.pose_index],False)
-            #         #     return goal
-    
-            #         # @smach.cb_interface(output_keys=['holes_poses'], outcomes=['succeeded'])
-            #         # def estimate_response_cb(userdata, response):
-            #         #     userdata.holes_poses = response.holes_poses
-            #         #     return
-            #     if response.message == 'return':
-            #         print('111')
-
             StateMachine.add('TASK_MANAGER',
-                # mhyServiceState('hangdian/gripper1/control_service', std_srvs.srv.Trigger,
-                #     response_cb=task_response_cb,
-                #     response_slots=['success', 'message']),
                 TaskServiceCB(),
-                transitions = {'succeeded':'DETECT_LEVER', 'lever':'DETECT_LEVER', 'button':'RECOGNITION','screen':'IMAGE_DETECT'},
-                remapping = {'index_of_button':'ud_index_of_button'})
+                transitions = {'succeeded':'succeeded', 'lever':'DETECT_LEVER', 'button':'RECOGNITION','screen':'IMAGE_DETECT'},
+                remapping = {'operation_info':'ud_operation_info', 'operate_type':'ud_operate_type', 
+                             'panel':'ud_panel', 'objects':'ud_objects'})
             
         else:
             StateMachine.add('TASK_MANAGER',
                 TaskServiceCB(),
-                transitions = {'succeeded':'DETECT_LEVER', 'lever':'DETECT_LEVER', 'button':'RECOGNITION','screen':'IMAGE_DETECT'},
-                remapping = {'index_of_button':'ud_index_of_button'})
+                transitions = {'succeeded':'succeeded', 'lever':'DETECT_LEVER', 'button':'RECOGNITION','screen':'IMAGE_DETECT'},
+                remapping = {'operation_info':'ud_operation_info', 'operate_type':'ud_operate_type', 
+                             'panel':'ud_panel', 'objects':'ud_objects'})
         # smach_ros里的ServiceState�?有succeeded、aborted、preempted三�?�状�?
 
         # 3. 操纵杆�?��?
         # check if sensors are OK
         if test:
-            lever_req = std_srvs.srv.SetBoolRequest()
-            lever_req.data = True
             @smach.cb_interface(input_keys=['lever_input'], output_keys=['result'], outcomes=['succeeded'])
             def lever_response_cb(userdata, response):
-                if userdata.lever_input == 'lever':
+                if userdata.lever_input == '1':
                     userdata.result = True
                 else:
                     userdata.result = False
                 # status = userdata.result # 除了不能print output_keys, �?的也没问题了
                 # print userdata.final_result
-                feedback.smach_info = 'lever detect'
-                actionServer.publish_feedback(feedback)
+                actionFeedback.smach_info = 'lever detect'
+                actionServer.publish_feedback(actionFeedback)
                 return
             StateMachine.add('DETECT_LEVER',
-                ServiceState('hangdian/smach/empty_service_req', std_srvs.srv.SetBool,
-                    request = lever_req,
+                ServiceState('hangdian/smach/empty_service',std_srvs.srv.Trigger,
                     response_cb=lever_response_cb),
                 transitions = {'succeeded':'TASK_MANAGER'},# succeeded should be TASK_M in real
-                remapping = {'lever_input':'ud_index_of_button', 'result':'final_result'} # userdata in viewer are only ud_xxx and final_xxx
+                remapping = {'lever_input':'ud_operate_type'} # userdata in viewer are only ud_xxx and final_xxx
                 )
         else:
+            @smach.cb_interface(input_keys=['lever_input'])
+            def lever_goal_cb(userdata, goal):  
+                actionFeedback.smach_info = 'lever detect started'
+                actionServer.publish_feedback(actionFeedback)
+                lever_goal = LeverDetectGoal()
+                print(userdata.lever_input[0])
+                if userdata.lever_input[1] == 1:
+                    lever_goal.handle_command = 'JSA'
+                return lever_goal
+            def lever_result_cb(userdata, status, result): 
+                actionFeedback.smach_info = 'lever detect finished'
+                actionServer.publish_feedback(actionFeedback)
+                return 'succeeded'
             StateMachine.add('DETECT_LEVER',
-                SimpleActionState('airhandle_server', LeverDetectAction,
-                    goal_slots = ['handle_command']),
-                transitions = {'succeeded':'RECOGNITION'},# succeeded should be TASK_M in real
-                remapping = {'handle_command':'ud_index_of_button'})
+                SimpleActionState('air_handle', LeverDetectAction,
+                    goal_cb=lever_goal_cb,
+                    result_cb=lever_result_cb),
+                transitions = {'succeeded':'TASK_MANAGER'},# succeeded should be TASK_M in real
+                remapping = {'lever_input':'ud_operation_info'})
+            
+            # @smach.cb_interface(input_keys=['lever_input'], output_keys=['result'], outcomes=['succeeded'])
+            # def lever_response_cb(userdata, response):
+            #     if userdata.lever_input == '1':
+            #         userdata.result = True
+            #     else:
+            #         userdata.result = False
+            #     # status = userdata.result # 除了不能print output_keys, �?的也没问题了
+            #     # print userdata.final_result
+            #     actionFeedback.smach_info = 'lever detect'
+            #     actionServer.publish_feedback(actionFeedback)
+            #     return
+            # StateMachine.add('DETECT_LEVER',
+            #     ServiceState('hangdian/smach/empty_service',std_srvs.srv.Trigger,
+            #         response_cb=lever_response_cb),
+            #     transitions = {'succeeded':'TASK_MANAGER'},# succeeded should be TASK_M in real
+            #     remapping = {'lever_input':'ud_operate_type'} # userdata in viewer are only ud_xxx and final_xxx
+            #     )
 
 
         # 4. 视�?�识�?（嵌套状态机�?
-        button_detect = StateMachine(outcomes=['succeeded','aborted','preempted'])
+        button_detect = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_operation_info'], output_keys=['ud_pose', 'ud_status'])
         with button_detect:
             ## 4.1 到�?�测位置
             # arm approach panel
             if test:
                 def observe_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'go to observation position'
+                    actionServer.publish_feedback(actionFeedback)
                     if response.success == True:
                         return
                     else:
@@ -270,65 +221,121 @@ def execute(goal):
                     transitions = {'succeeded':'YOLOICP'})
             else:
                 ####### to be modified to Action by mhy ###### 
+                # StateMachine.add('OBSERVE_POSITION',
+                #     SimpleActionState('large_move_server', std_srvs.srv.Trigger,
+                #         goal_slots = ['button_index']),
+                #     transitions = {'succeeded':'YOLOICP'},
+                #     remapping = {'button_index':'ud_operation_info'})
+                def observe_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'go to observation position'
+                    actionServer.publish_feedback(actionFeedback)
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('OBSERVE_POSITION',
-                    SimpleActionState('large_move_server', std_srvs.srv.Trigger,
-                        goal_slots = ['button_index']),
-                    transitions = {'succeeded':'YOLOICP'},
-                    remapping = {'button_index':'ud_index_of_button'})
+                    ServiceState('hangdian/smach/empty_service',std_srvs.srv.Trigger,
+                        response_slots=['message'],
+                        response_cb=observe_response_cb),
+                    transitions = {'succeeded':'YOLOICP'})
+
 
             ## 4.2 YOLO-ICP
             # yolo icp for button localization
             if test:
                 def yolo_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'yolo detect'
+                    actionServer.publish_feedback(actionFeedback)
                     if response.success == True:
                         return
                     else:
                         return
                 StateMachine.add('YOLOICP',
                     ServiceState('hangdian/smach/empty_service',std_srvs.srv.Trigger,
+                        response_slots=['message'],
                         response_cb=yolo_response_cb),
-                    transitions={'succeeded':'SVM'})
+                    transitions={'succeeded':'SVM'},
+                    remapping = {'button_index':'ud_operation_info', 'message':'ud_pose'})
             else:
+                @smach.cb_interface(input_keys=['icp_input'])
+                def icp_request_cb(userdata, request):
+                    actionFeedback.smach_info = 'icp detect started'
+                    actionServer.publish_feedback(actionFeedback)
+                    icp_request = ButtonDetectPoseRequest()
+                    icp_request.button_index = int(userdata.icp_input[0])
+                    print(icp_request.button_index)
+                    return icp_request
+                def icp_response_callback(userdata, response):
+                    actionFeedback.smach_info = 'icp detect finished'
+                    actionServer.publish_feedback(actionFeedback)
+                    print("yolo result is: ")
+                    print(response.pose_in_camera)
+                    return 
                 StateMachine.add('YOLOICP',
                     ServiceState('/yolo_icp_pose', ButtonDetectPose,
-                        request_slots = ['button_index'],
-                        response_slots=['pose_in_camera']),
+                        request_cb=icp_request_cb,
+                        response_slots=['pose_in_camera'],
+                        response_cb=icp_response_callback),
                     transitions = {'succeeded':'SVM'},
-                    remapping = {'button_index':'ud_index_of_button', 'pose_in_camera':'ud_pose'})
+                    remapping = {'icp_input':'ud_operation_info', 'pose_in_camera':'ud_pose'})
+                # def yolo_response_cb(userdata, response):
+                #     actionFeedback.smach_info = 'yolo detect'
+                #     actionServer.publish_feedback(actionFeedback)
+                #     if response.success == True:
+                #         return
+                #     else:
+                #         return
+                # StateMachine.add('YOLOICP',
+                #     ServiceState('hangdian/smach/empty_service',std_srvs.srv.Trigger,
+                #         response_slots=['message'],
+                #         response_cb=yolo_response_cb),
+                #     transitions={'succeeded':'SVM'},
+                #     remapping = {'button_index':'ud_operation_info', 'message':'ud_pose'})
 
-            ## 4.3 状态识�?（也许可以和4.2并�?�？�?
+            ## 4.3 状态识别（也许可以和4.2并�?�？�?
             if test:
                 def svm_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'svm detect'
+                    actionServer.publish_feedback(actionFeedback)
                     if response.success == True:
                         return
                     else:
                         return
                 StateMachine.add('SVM',
                     ServiceState('hangdian/smach/empty_service',std_srvs.srv.Trigger,
+                        response_slots=['message'],
                         response_cb=svm_response_cb),
-                    {'succeeded':'succeeded'})
+                    transitions = {'succeeded':'succeeded'},
+                    remapping = {'button_index':'ud_operation_info', 'message':'ud_status'})
             else:
+                @smach.cb_interface(input_keys=['svm_input'])
+                def svm_request_cb(userdata, request):
+                    actionFeedback.smach_info = 'svm detect started'
+                    actionServer.publish_feedback(actionFeedback)
+                    svm_request = ButtonDetectStateRequest()
+                    svm_request.panel_index = int(userdata.svm_input[0])
+                    svm_request.button_index = userdata.svm_input[2]
+                    return svm_request
+                def svm_response_callback(userdata, response):
+                    actionFeedback.smach_info = 'svm detect finished'
+                    actionServer.publish_feedback(actionFeedback)
+                    print("svm result is: ")
+                    print(response.state)
+                    return
                 StateMachine.add('SVM',
                     ServiceState('/svm', ButtonDetectState,
-                        request_slots = ['button_index'],
-                        response_slots=['state']),
+                        request_cb=svm_request_cb,
+                        response_slots=['state'],
+                        response_cb=svm_response_callback),
                     transitions = {'succeeded':'succeeded'},
-                    remapping = {'button_index':'ud_index_of_button', 'state':'ud_status'})
+                    remapping = {'svm_input':'ud_operation_info', 'state':'ud_status'})
         StateMachine.add('RECOGNITION',button_detect, {'succeeded':'ARM_DETECT'})
         
-        poseInCamera = Pose()
-        poseInCamera.position.x = 0.0
-        poseInCamera.position.y = 0.0
-        poseInCamera.position.z = 0.35
-        poseInCamera.orientation.w = 1.0
-        poseInCamera.orientation.x = 0.0
-        poseInCamera.orientation.y = 0.0
-        poseInCamera.orientation.z = 0.0
-        
-        manipulateGoal = ButtonManipulateGoal(button_index = "1", pose_in_camera = poseInCamera, button_state = 2)
-        # 5. 机�?�臂检�?(�?action)
+        # 5. 机械臂检测(用action)
         if test:
             def arm_response_cb(userdata, response):
+                actionFeedback.smach_info = 'arm detect'
+                actionServer.publish_feedback(actionFeedback)
                 if response.success == True:
                     return
                 else:
@@ -344,18 +351,32 @@ def execute(goal):
         else:
             ####### to be modified to Action by mhy ######
             StateMachine.add('ARM_DETECT', 
-                SimpleActionState('detect_with_arm_gripper', std_srvs.srv.Trigger,
-                        goal_slots = ['button_index', 'pose_in_camera', 'button_state']), 
-                transitions = {'succeeded':'succeeded', 'aborted':'ARM_DETECT', 'preempted':'ARM_DETECT'},# succeeded should be TASK_M in real
-                remapping = {'button_index':'ud_index_of_button', 'pose_in_camera':'ud_pose', 'button_state':'ud_status'})
+                SimpleActionState('manipulate_controller_iiwa2', ButtonManipulateAction, 
+                    goal_slots = ['button_index', 'pose_in_camera', 'button_state']), 
+                transitions = {'succeeded':'TASK_MANAGER'},
+                remapping = {'button_index':'ud_operation_info', 'pose_in_camera':'ud_pose', 'button_state':'ud_status'})
+            # def arm_response_cb(userdata, response):
+            #     actionFeedback.smach_info = 'arm detect'
+            #     actionServer.publish_feedback(actionFeedback)
+            #     if response.success == True:
+            #         return
+            #     else:
+            #         return
+            # StateMachine.add('ARM_DETECT', 
+            #     ServiceState('hangdian/smach/empty_service', std_srvs.srv.Trigger,
+            #         response_cb=arm_response_cb), 
+            #     transitions = {'succeeded':'TASK_MANAGER'})
         
+
         # 6. 图像识别（嵌套状态机，操作后即可并�?�）
-        image_detect = StateMachine(outcomes=['succeeded','aborted','preempted'])
+        image_detect = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_operation_info', 'ud_panel'])
         with image_detect:
             ## 6.1 到�?�测位置（�?�果需要）
             # arm go to observe position
             if test:
                 def ob_image_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'go to observation position'
+                    actionServer.publish_feedback(actionFeedback)
                     if response.success == True:
                         return
                     else:
@@ -367,19 +388,31 @@ def execute(goal):
             else:
                 ####### to be modified to Action by mhy ######
                 # 需要判�?�?否需要到观测位置，�?�果不用就不调用largemove action
+                # StateMachine.add('OBSERVE_IMAGE',
+                #     SimpleActionState('large_move_server', std_srvs.srv.Trigger,
+                #         goal_slots = ['button_index']),
+                #     transitions = {'succeeded':'DETECT_IMAGE'},
+                #     remapping = {'button_index':'ud_index_of_button'})
+                def ob_image_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'go to observation position'
+                    actionServer.publish_feedback(actionFeedback)
+                    if response.success == True:
+                        return
+                    else:
+                        return
                 StateMachine.add('OBSERVE_IMAGE',
-                    SimpleActionState('large_move_server', std_srvs.srv.Trigger,
-                        goal_slots = ['button_index']),
-                    transitions = {'succeeded':'DETECT_IMAGE'},
-                    remapping = {'button_index':'ud_index_of_button'})
+                    ServiceState('hangdian/smach/empty_service', std_srvs.srv.Trigger,
+                        response_cb=ob_image_response_cb),
+                    {'succeeded':'DETECT_IMAGE'})
 
             ## 6.2 图像识别
             ## 成功--> 回到2. 任务管理�?
             # arm go to observe position
             if test:
                 def image_response_cb(userdata, response):
+                    actionFeedback.smach_info = 'image detect'
+                    actionServer.publish_feedback(actionFeedback)
                     if response.success == True:
-                        central_control_action_result = True
                         return
                     else:
                         return
@@ -388,13 +421,18 @@ def execute(goal):
                         response_cb=image_response_cb),
                     {'succeeded':'succeeded'})
             else:
-                ####### to be modified to service by npy ######
+                @smach.cb_interface(input_keys=['image_input'])
+                def image_request_cb(userdata, request):
+                    actionFeedback.smach_info = 'image detect'
+                    actionServer.publish_feedback(actionFeedback)
+                    image_request = ScreenDetectRequest()
+                    image_request.category = int(userdata.image_input[0])
+                    return image_request
                 StateMachine.add('DETECT_IMAGE',
-                    ServiceState('digits_pre', std_srvs.srv.Trigger,
-                        request_slots = ['screen_input_list'],
-                        response_slots = ['screen_output']),
-                    transitions = {'succeeded':'succeeded', 'aborted':'DETECT_IMAGE', 'preempted':'DETECT_IMAGE'},
-                    remapping = {'screen_input_list':'ud_index_of_button', 'screen_output':'ud_screen_output'})
+                    ServiceState('/ScreenDetect', ScreenDetect,
+                        request_cb=image_request_cb),
+                    transitions = {'succeeded':'succeeded'},
+                    remapping = {'image_input':'ud_operation_info'})
         StateMachine.add('IMAGE_DETECT', image_detect, {'succeeded':'TASK_MANAGER'})
 
     # Attach a SMACH introspection server
@@ -410,8 +448,7 @@ def execute(goal):
 
     while not central_control_action_result:
         sleep(0.1)
-        
-    actionServer.set_succeeded(result)
+    actionServer.set_succeeded(actionResult)
     
 
 def main():
