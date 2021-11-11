@@ -3,6 +3,8 @@
 
     <node name="empty_service" pkg="smach_tutorials" type="empty_service_node.py" output="screen" />
     <!-- <node name="task_manager" pkg="task_parser" type="test_task_manager" output="screen" /> -->
+    <!-- <node name="local_table_node" pkg="local_table" type="local_table_node" output="screen"/> -->
+    <!-- <node name="observe_move_node" pkg="observe_move" type="simple_move" output="screen" /> -->
     
     <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>
     <node name="publish_eye_in_hand" pkg="calibration" type="publish_eye_in_hand" output="screen"/>
