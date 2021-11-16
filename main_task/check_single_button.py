@@ -27,7 +27,7 @@ from geometry_msgs.msg import Pose
 from std_msgs.msg import String
 # 需要source才能找到�?定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
-from hangdian_msgs.srv import ScreenDetect, ScreenDetectRequest, TaskManage, TaskManageResponse
+from hangdian_msgs.srv import ScreenDetect, ScreenDetectRequest, TaskManage, TaskManageResponse, LocalTable, LocalTableRequest
 from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal
 from hangdian_msgs.msg import CentralControlRunAction, CentralControlRunResult, CentralControlRunFeedback
 from hangdian_msgs.msg import ButtonObserveMoveAction, ButtonObserveMoveGoal
@@ -80,10 +80,15 @@ class TaskServiceCB(smach.State):
                     if taskResponse.module == 1:
                         print("To detect button !!!")
                         self.outcome = 'button'
-                        if taskResponse.operate_type == 2 or taskResponse.operate_type == 5: # switch button
+                        # comment for no state detection
+                        # if taskResponse.operate_type == 2 or taskResponse.operate_type == 6 or taskResponse.operate_type == 5: # switch button
+                        #     userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
+                        #         int(taskResponse.objects[0]), int(taskResponse.objects[1])]
+                        #     self.outcome = 'button_with_state'
+                        if taskResponse.operate_type == 2 or taskResponse.operate_type == 6 or taskResponse.operate_type == 5: # switch button
                             userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
                                 int(taskResponse.objects[0]), int(taskResponse.objects[1])]
-                            self.outcome = 'button_with_state'
+                            self.outcome = 'button'
                         elif taskResponse.operate_type == 4: # continuous press
                             a = [int(taskResponse.panel), int(taskResponse.operate_type)]
                             b = [int(x) for x in taskResponse.objects]
@@ -91,7 +96,7 @@ class TaskServiceCB(smach.State):
                             self.outcome = 'button'
                         else:
                             userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
-                                int(taskResponse.objects[0])]
+                                int(taskResponse.objects[0]), 0]
                             self.outcome = 'button'
                     elif taskResponse.module == 2:
                         print("To detect lever !!!")
@@ -117,6 +122,7 @@ def execute(goal):
     global central_control_action_result
     
     test = False
+    useICP = False
 
     # Create a SMACH state machine
     sm0 = StateMachine(outcomes=['succeeded','aborted','preempted'])
@@ -159,7 +165,7 @@ def execute(goal):
         else:
             StateMachine.add('TASK_MANAGER',
                 TaskServiceCB(),
-                transitions = {'succeeded':'succeeded', 'no_xml_loaded':'TASK_MANAGER', 'lever':'DETECT_LEVER', 'button':'RECOGNITION', 'button_with_state':'RECOGNITION_WITH_SVM'},
+                transitions = {'succeeded':'RETURN_TO_ORIGIN', 'no_xml_loaded':'TASK_MANAGER', 'lever':'DETECT_LEVER', 'button':'RECOGNITION', 'button_with_state':'RECOGNITION_WITH_SVM'},
                 remapping = {'operation_info':'ud_operation_info', 'operate_type':'ud_operate_type', 
                              'panel':'ud_panel', 'objects':'ud_objects'})
         # smach_ros里的ServiceState�?有succeeded、aborted、preempted三�?�状�?
@@ -240,7 +246,7 @@ def execute(goal):
                     return observe_goal
                 @smach.cb_interface(input_keys=['observe_input'], output_keys=['current_pose'])
                 def observe_result_cb(userdata, status, result): 
-                    sleep(1.0)
+                    # sleep(1.0)
                     userdata.current_pose = userdata.observe_input[0]
                     actionFeedback.smach_info = 'observe pose reached'
                     actionServer.publish_feedback(actionFeedback)
@@ -270,7 +276,7 @@ def execute(goal):
                         response_cb=yolo_response_cb),
                     transitions={'succeeded':'SVM'},
                     remapping = {'button_index':'ud_operation_info', 'message':'ud_pose'})
-            else:
+            elif useICP:
                 @smach.cb_interface(input_keys=['icp_input'])
                 def icp_request_cb(userdata, request):
                     actionFeedback.smach_info = 'icp detect started'
@@ -309,6 +315,36 @@ def execute(goal):
                 #         response_cb=yolo_response_cb),
                 #     transitions={'succeeded':'SVM'},
                 #     remapping = {'button_index':'ud_operation_info', 'message':'ud_pose'})
+            else:
+                # 不用icp定位，获取已知的定位结果
+                @smach.cb_interface(input_keys=['icp_input'])
+                def icp_request_cb(userdata, request):
+                    actionFeedback.smach_info = 'icp detect started'
+                    actionServer.publish_feedback(actionFeedback)
+                    process_info.publish(actionFeedback.smach_info)
+                    table_request = LocalTableRequest()
+                    table_request.table_type = 5
+                    table_request.panel_index = int(userdata.icp_input[0])
+                    print(table_request.panel_index)
+                    return table_request
+                @smach.cb_interface(input_keys=['icp_input'], output_keys=['state', 'pose_in_camera'])
+                def icp_response_callback(userdata, response):
+                    actionFeedback.smach_info = 'icp detect finished'
+                    actionServer.publish_feedback(actionFeedback)
+                    process_info.publish(actionFeedback.smach_info)
+                    print("localization table result is: ")
+                    print(response.pose_in_camera)
+                    input('input to continue')
+                    userdata.pose_in_camera = response.pose_in_camera
+                    userdata.state = [0, int(userdata.icp_input[3])]
+                    return
+                StateMachine.add('YOLOICP',
+                    ServiceState('/hangdian/info/local_tables', LocalTable,
+                        request_cb=icp_request_cb,
+                        response_cb=icp_response_callback),
+                    transitions = {'succeeded':'succeeded'},
+                    remapping = {'icp_input':'ud_operation_info', 'pose_in_camera':'ud_pose', 'state':'ud_status'})
+
 
         StateMachine.add('RECOGNITION',button_detect, {'succeeded':'ARM_DETECT'})
 
@@ -348,7 +384,7 @@ def execute(goal):
                     return observe_goal
                 @smach.cb_interface(input_keys=['observe_input'], output_keys=['current_pose'])
                 def observe_result_cb(userdata, status, result): 
-                    sleep(1.0)
+                    # sleep(1.0)
                     userdata.current_pose = userdata.observe_input[0]
                     actionFeedback.smach_info = 'observe pose reached'
                     actionServer.publish_feedback(actionFeedback)
@@ -493,6 +529,30 @@ def execute(goal):
             #     ServiceState('hangdian/smach/empty_service', std_srvs.srv.Trigger,
             #         response_cb=arm_response_cb), 
             #     transitions = {'succeeded':'TASK_MANAGER'})
+        
+        @smach.cb_interface(input_keys=['current_pose'])
+        def observe_goal_cb(userdata, goal):  
+            actionFeedback.smach_info = 'go to origin pose 11 started'
+            actionServer.publish_feedback(actionFeedback)
+            process_info.publish(actionFeedback.smach_info)
+            observe_goal = ButtonObserveMoveGoal()
+            observe_goal.button_index = [userdata.current_pose, 11]
+            return observe_goal
+        @smach.cb_interface(output_keys=['current_pose'])
+        def observe_result_cb(userdata, status, result): 
+            # sleep(1.0)
+            userdata.current_pose = 11
+            actionFeedback.smach_info = 'origin pose reached'
+            actionServer.publish_feedback(actionFeedback)
+            process_info.publish(actionFeedback.smach_info)
+            return 'succeeded'
+        StateMachine.add('RETURN_TO_ORIGIN',
+            SimpleActionState('observe_move_server_2', ButtonObserveMoveAction,
+                goal_cb=observe_goal_cb,
+                result_cb=observe_result_cb),
+            transitions = {'succeeded':'succeeded'},# succeeded should be TASK_M in real
+            remapping = {'current_pose':'ud_current_pose'})
+
         
 
     # Attach a SMACH introspection server
