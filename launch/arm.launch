@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node name="iiwa1_manipulate_server_node" pkg="manipu_button" type="iiwa1_manipulate_server_node" output="screen" />
+    <!-- <node name="iiwa2_manipulate_server_node" pkg="manipu_button" type="iiwa2_manipulate_server_node" output="screen" /> -->
+
+    <node name="simple_move_iiwa1" pkg="observe_move" type="simple_move_iiwa1" output="screen"/>
+    <!-- <node name="simple_move_iiwa2" pkg="observe_move" type="simple_move_iiwa2" output="screen"/> -->
+
+</launch>

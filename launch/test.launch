@@ -6,18 +6,24 @@
     <!-- <node name="local_table_node" pkg="local_table" type="local_table_node" output="screen"/> -->
     <!-- <node name="observe_move_node" pkg="observe_move" type="simple_move" output="screen" /> -->
     
+    <param name = "/iiwa1/toolName" type="string" value = "ElectricGripperY"/>
     <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>
     <node name="publish_eye_in_hand" pkg="calibration" type="publish_eye_in_hand" output="screen"/>
+
+    <!-- <node name = "gripper1_driver" pkg = "gripper_controllers" type="gripper1_driver" output="screen"/> -->
+    <!-- <node name = "gripper2_driver" pkg = "gripper_controllers" type="gripper2_driver" output="screen"/> -->
+
+    <!-- <node name = "airhandle_server" pkg = "air_handle" type="airhandle_server" output="screen"/> -->
+
+    <!-- <node name="hangdian_gui_py" pkg="hangdian_user_gui" type="pyqt5_test.py" output="screen" /> -->
     
-
-    <node name="state_service" pkg="hangdian" type="svmtest.py" output="screen"/>
-    <node name="pose_service" pkg="hangdian" type="hds.py" output="screen"/>
-    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
-        <arg name="filters"         value="pointcloud"/>
-        <arg name="align_depth"     value="true"/>
-    </include> -->
-
-    <node name="linemod2D_service" pkg="shape_based_matching" type="shape_based_matching_hangdian_test" output="screen"/>
-    <node name="screen_service" pkg="template_matching" type="hangdian_ros.py" output="screen"/>
+    
+    <!-- <include file="$(find realsense2_camera)/launch/rs_multiple_devices.launch" >
+        <arg name="serial_no_camera1"     value="637202001815"/>
+        <arg name="serial_no_camera2"     value="636204004145"/>
+    </include>
+    <node name="state_halcon_service" pkg="svm_halcon" type="svm_halcon_node" output="screen"/>
+    <node name="state_service" pkg="hangdian" type="svmtest.py" output="screen"/> -->
+    <!-- <node name="pose_service" pkg="hangdian" type="hds.py" output="screen"/> -->
 
 </launch>
