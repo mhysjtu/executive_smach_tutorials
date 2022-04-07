@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node name="gripper1_driver" pkg="gripper_controllers" type="gripper1_driver"/>
+    <node name="gripper2_driver" pkg="gripper_controllers" type="gripper2_driver" output="screen"/>
+
+    <node name="airhandle_server" pkg="air_handle" type="airhandle_server" output="screen"/>
+
+</launch>

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+
+    <param name = "/iiwa1/toolName" type="string" value = "ElectricGripperY"/>
+    <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>
+
+    <node name="hangdian_gui" pkg="hangdian_user_gui" type="pyqt5_test.py"/>
+</launch>

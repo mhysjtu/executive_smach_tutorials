@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+    <include file="$(find smach_tutorials)/launch/setup.launch" />
+
+    <include file="$(find smach_tutorials)/launch/actuator.launch" />
+
+    <!-- <include file="$(find smach_tutorials)/launch/arm.launch" /> -->
+
+    <!-- <include file="$(find smach_tutorials)/launch/svm.launch" />
+
+    <include file="$(find smach_tutorials)/launch/screen.launch" /> -->
+
+</launch>

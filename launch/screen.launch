@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+    <include file="$(find usb_cam)/launch/usb_cam-test1.launch" />
+    <include file="$(find usb_cam)/launch/usb_cam-test2.launch" />
+    
+    <node name="halcon_detection_node" pkg="halcon_bridge" type="halcon_detection_node" output="screen"/>
+
+</launch>

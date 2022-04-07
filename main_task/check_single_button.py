@@ -26,7 +26,7 @@ from smach_ros.util import set_preempt_handler
 import std_srvs.srv
 from geometry_msgs.msg import Pose
 from std_msgs.msg import String
-# 需要source才能找到�?定义的msg！！
+# 需要source才能找到自定义的msg！！
 from hangdian_msgs.srv import ButtonDetectPose, ButtonDetectPoseRequest, ButtonDetectPoseResponse, ButtonDetectState, ButtonDetectStateRequest, ButtonDetectStateResponse
 from hangdian_msgs.srv import ScreenDetect, ScreenDetectRequest, ScreenDetectReturn, ScreenDetectReturnRequest, TaskManage, TaskManageResponse, LocalTable, LocalTableRequest
 from hangdian_msgs.msg import LeverDetectAction, LeverDetectGoal, ButtonManipulateAction, ButtonManipulateGoal
@@ -207,15 +207,14 @@ def execute(goal):
     # sm0.userdata.final_result = None
     # Open the container
     with sm0:
-        # 0. �?�?�?
+        # 0. action的feedback和result全局变量定义
         global actionFeedback
         actionFeedback = CentralControlRunFeedback()
         global actionResult
         actionResult = CentralControlRunResult()
         actionResult.result = True
 
-        # 1. �?检
-        # check if sensors are OK
+        # 1. 机械臂初始面板位置
         @smach.cb_interface(output_keys=['current_pose1', 'current_pose2'])
         def check_response_cb(userdata, response):
             userdata.current_pose1 = 18
@@ -232,10 +231,7 @@ def execute(goal):
         actionServer.publish_feedback(actionFeedback)
         process_info.publish(actionFeedback.smach_info)
 
-        # 2. 任务管理�?
-        ## 如果任务�?完成，继�?检�?
-        ## 任务完成，则到总sm的succeed状�?
-        # check if sensors are OK
+        # 2. 任务管理器
         if test:
             StateMachine.add('TASK_MANAGER',
                 TaskServiceCB(),
@@ -263,8 +259,6 @@ def execute(goal):
                     userdata.result = True
                 else:
                     userdata.result = False
-                # status = userdata.result # 除了不能print output_keys, �?的也没问题了
-                # print userdata.final_result
                 actionFeedback.smach_info = 'lever detect'
                 actionServer.publish_feedback(actionFeedback)
                 return
@@ -305,10 +299,10 @@ def execute(goal):
 
 
 
-        # 4. 视觉识别（嵌套状态机�?
+        # 4. 视觉识别（嵌套状态机）
         button_detect_1 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose1','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose1'])
         with button_detect_1:
-            ## 4.1 到�?�测位置
+            ## 4.1 到观测位置
             # arm approach panel
             if test:
                 def observe_response_cb(userdata, response):
@@ -402,7 +396,7 @@ def execute(goal):
 
         button_detect_2 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose2','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose2'])
         with button_detect_2:
-            ## 4.1 到�?�测位置
+            ## 4.1 到观测位置
             # arm approach panel
             if test:
                 def observe_response_cb(userdata, response):
@@ -496,7 +490,7 @@ def execute(goal):
 
         button_detect_with_svm1 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose1','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose1'])
         with button_detect_with_svm1:
-            ## 4.1 到�?�测位置
+            ## 4.1 到观测位置
             # arm approach panel
             if test:
                 def observe_response_cb(userdata, response):
@@ -583,7 +577,7 @@ def execute(goal):
                     transitions = {'succeeded':'SVM'},
                     remapping = {'icp_input':'ud_operation_info', 'pose_in_camera':'ud_pose'})
 
-            ## 4.3 状态识别（也许可以和4.2并�?�？�?
+            ## 4.3 状态识别
             if test:
                 def svm_response_cb(userdata, response):
                     actionFeedback.smach_info = 'svm detect'
@@ -629,7 +623,7 @@ def execute(goal):
 
         button_detect_with_svm2 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose2','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose2'])
         with button_detect_with_svm2:
-            ## 4.1 到�?�测位置
+            ## 4.1 到观测位置
             # arm approach panel
             if test:
                 def observe_response_cb(userdata, response):
@@ -716,7 +710,7 @@ def execute(goal):
                     transitions = {'succeeded':'SVM'},
                     remapping = {'icp_input':'ud_operation_info', 'pose_in_camera':'ud_pose'})
 
-            ## 4.3 状态识别（也许可以和4.2并�?�？�?
+            ## 4.3 状态识别
             if test:
                 def svm_response_cb(userdata, response):
                     actionFeedback.smach_info = 'svm detect'
@@ -790,10 +784,10 @@ def execute(goal):
         
 
 
-        # 6. 图像识别（嵌套状态机，操作后即可并�?�）
+        # 6. 图像识别
         image_detect = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_operation_info', 'ud_current_pose2'], output_keys=['ud_current_pose2'])
         with image_detect:
-            ## 6.1 到�?�测位置（�?�果需要）
+            ## 6.1 到观测位置（如果需要）
             # arm go to observe position
             if test:
                 def ob_image_response_cb(userdata, response):
@@ -841,7 +835,7 @@ def execute(goal):
                     remapping = {'observe_input':'ud_operation_info','current_pose':'ud_current_pose2'})
 
             ## 6.2 图像识别
-            ## 成功--> 回到2. 任务管理�?
+            ## 成功--> 回到2. 任务管理器
             # arm go to observe position
             if test:
                 def image_response_cb(userdata, response):
@@ -891,7 +885,7 @@ def execute(goal):
         image_detect_return = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_operation_info', 'ud_current_pose2'], 
             output_keys=['ud_current_pose2', 'ud_operation_info'])
         with image_detect_return:
-            ## 6.1 到�?�测位置（�?�果需要）
+            ## 6.1 到观测位置（如果需要）
             # arm go to observe position
             if test:
                 def ob_image_response_cb(userdata, response):
@@ -939,7 +933,7 @@ def execute(goal):
                     remapping = {'observe_input':'ud_operation_info','current_pose':'ud_current_pose2'})
 
             ## 6.2 图像识别
-            ## 成功--> 回到2. 任务管理�?
+            ## 成功--> 回到2. 任务管理器
             # arm go to observe position
             if test:
                 def image_response_cb(userdata, response):

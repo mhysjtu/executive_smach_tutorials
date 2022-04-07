@@ -1,30 +1,18 @@
 <?xml version="1.0"?>
 <launch>
 
+    <param name = "/iiwa1/toolName" type="string" value = "ElectricGripperY"/>
     <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>
 
-<!-- <node name="observe_move_node" pkg="observe_move" type="simple_move" output="screen" /> -->
-<!-- <node name="iiwa2_manipulate_server_node" pkg="manipu_button" type="iiwa2_manipulate_server_node" output="screen" /> -->
-
-    <node name="empty_service" pkg="smach_tutorials" type="empty_service_node.py" output="screen" />
-
-
-    <!-- <node name="task_manager" pkg="task_parser" type="task_parser_node" output="screen" /> -->
-    <!-- <node name="local_table_node" pkg="local_table" type="local_table_node" output="screen"/> -->
+    <node name="publish_eye_in_hand" pkg="calibration" type="publish_eye_in_hand"/>
+    <node name="empty_service" pkg="smach_tutorials" type="empty_service_node.py"/>
     
-    
-    
-    <node name="publish_eye_in_hand" pkg="calibration" type="publish_eye_in_hand" output="screen"/>
-    
+    <node name="gripper2_driver" pkg="gripper_controllers" type="gripper2_driver"/>
 
-    <!-- <node name="state_service" pkg="hangdian" type="svmtest.py" output="screen"/>
-    <node name="pose_service" pkg="hangdian" type="hds.py" output="screen"/> -->
-    <!-- <include file="$(find realsense2_camera)/launch/rs_camera.launch" >
-        <arg name="filters"         value="pointcloud"/>
-        <arg name="align_depth"     value="true"/>
-    </include> -->
+    <node name="task_manager" pkg="task_parser" type="task_parser_node" output="screen" />
+    <node name="local_table_node" pkg="local_table" type="local_table_node" output="screen"/>
 
-    <!-- <node name="linemod2D_service" pkg="shape_based_matching" type="shape_based_matching_hangdian_test" output="screen"/>
-    <node name="screen_service" pkg="template_matching" type="hangdian_ros.py" output="screen"/> -->
+    <node name="iiwa2_manipulate_server_node" pkg="manipu_button" type="iiwa2_manipulate_server_node" output="screen" />
+    <node name="simple_move_iiwa2" pkg="observe_move" type="simple_move_iiwa2" output="screen"/>
 
 </launch>
