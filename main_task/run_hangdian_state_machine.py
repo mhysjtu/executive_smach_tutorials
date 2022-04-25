@@ -109,20 +109,20 @@ class TaskServiceCB(smach.State):
                         # 根据操作类型，执行不同状态
                         # 拨杆开关
                         if taskResponse.operate_type == 2:
-                            # 操作字符串：[面板编号，操作类型，开关编号，开关目标状态]
+                            # 正则数组：[面板编号，操作类型，开关编号，开关目标状态]
                             userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
                                 int(taskResponse.objects[0]), int(taskResponse.objects[1])]
                             self.outcome = 'button1' # 为了测试，此处人为输入开关状态；若需调用svm识别状态，则要改为'button_with_state1'
                         # 连续按压按钮开关
                         elif taskResponse.operate_type == 4:
-                            # 操作字符串：[面板编号，操作类型，连续按数量，开关1, ...]
+                            # 正则数组：[面板编号，操作类型，连续按数量，开关1, ...]
                             a = [int(taskResponse.panel), int(taskResponse.operate_type)]
                             b = [int(x) for x in taskResponse.objects]
                             userdata.operation_info = a+b 
                             self.outcome = 'button1'
                         # 其余类型（按压单个按钮）
                         else:
-                            # 操作字符串：[面板编号，操作类型，开关，0] TODO:0可能是多余的
+                            # 正则数组：[面板编号，操作类型，开关，0] TODO:0可能是多余的
                             userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
                                 int(taskResponse.objects[0]),0]
                             self.outcome = 'button1'
@@ -134,20 +134,20 @@ class TaskServiceCB(smach.State):
                         # 根据操作类型，执行不同状态
                         # 需要检测状态的开关
                         if taskResponse.operate_type == 2 or taskResponse.operate_type == 3 or taskResponse.operate_type == 6 or taskResponse.operate_type == 5: 
-                            # 操作字符串：[面板编号，操作类型，开关编号，开关目标状态]
+                            # 正则数组：[面板编号，操作类型，开关编号，开关目标状态]
                             userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
                                 int(taskResponse.objects[0]), int(taskResponse.objects[1])]
                             self.outcome = 'button2' # 为了测试，此处人为输入开关状态；若需调用svm识别状态，则要改为'button_with_state2'
                         # 连续按压按钮开关
                         elif taskResponse.operate_type == 4: 
-                            # 操作字符串：[面板编号，操作类型，连续按数量，开关1, ...]
+                            # 正则数组：[面板编号，操作类型，连续按数量，开关1, ...]
                             a = [int(taskResponse.panel), int(taskResponse.operate_type)]
                             b = [int(x) for x in taskResponse.objects]
                             userdata.operation_info = a+b 
                             self.outcome = 'button2'
                         # 其余类型（按压单个按钮）
                         else:
-                            # 操作字符串：[面板编号，操作类型，开关，0] TODO:0可能是多余的
+                            # 正则数组：[面板编号，操作类型，开关，0] TODO:0可能是多余的
                             userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
                                 int(taskResponse.objects[0]),0]
                             self.outcome = 'button2'
@@ -155,7 +155,7 @@ class TaskServiceCB(smach.State):
                     elif taskResponse.module == 2:
                         print("To detect lever !!!")
                         self.outcome = 'lever'
-                        # 操作字符串：[驾驶杆or油门杆，哪个开关，开关状态]
+                        # 正则数组：[驾驶杆or油门杆，哪个开关，开关状态]
                         userdata.operation_info = [int(taskResponse.operate_type),taskResponse.panel,
                             int(taskResponse.objects[0])]
                     # 图像检测 
@@ -163,7 +163,7 @@ class TaskServiceCB(smach.State):
                         # 等待图像稳定
                         sleep(0.5)
                         print("To detect image !!!")
-                        # 操作字符串：[b,c,d,e,f,g...]
+                        # 正则数组：[b,c,d,e,f,g...]
                         a = [int(taskResponse.operate_type), int(taskResponse.panel)]
                         b = [x for x in taskResponse.objects]
                         userdata.operation_info = a + b
@@ -175,7 +175,7 @@ class TaskServiceCB(smach.State):
                     # 灯光检测    
                     elif taskResponse.module == 4:
                         print("To detect light !!!")
-                        # 操作字符串：[面板编号，操作类型(仅为1)，开关编号，开关期望状态]
+                        # 正则数组：[面板编号，操作类型(仅为1)，开关编号，开关期望状态]
                         userdata.operation_info = [int(taskResponse.panel), int(taskResponse.operate_type), 
                                 int(taskResponse.objects[0]), int(taskResponse.objects[1])]
 
@@ -188,7 +188,7 @@ class TaskServiceCB(smach.State):
                         # 等待图像稳定
                         sleep(0.5)
                         print("To detect image and return result!!!")
-                        # 操作字符串：[b,c,d,e,f,g...]
+                        # 正则数组：[b,c,d,e,f,g...]
                         a = [int(taskResponse.operate_type), int(taskResponse.panel)]
                         b = [x for x in taskResponse.objects]
                         userdata.operation_info = a + b
@@ -258,7 +258,7 @@ def execute(goal):
         # @描述：任务管理器，管理各任务的切换，切换方法见TaskServiceCB类的execute成员函数
         #       各状态映射见下方的transitions字典，key代表TASK_MANAGER状态的结果，value代表下一个执行的状态
         # @输出：                      局部userdata    --> 全局userdata
-        #       各自模块接受的操作字符串: operation_info --> ud_operation_info
+        #       各自模块接受的正则数组:   operation_info --> ud_operation_info
         #       开关操作类型:           operate_type   --> ud_operate_type
         #       开关所在面板:           panel          --> ud_panel
         #       操作的开关（一个或多个）: objects        --> ud_objects
@@ -275,7 +275,7 @@ def execute(goal):
         # 3. 'DETECT_LEVER'状态  ==>  'TASK_MANAGER'
         # @描述：调用操作杆检测模块
         # @输入:                        全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串: ud_operation_info --> lever_input
+        #       任务管理器下发的正则数组:   ud_operation_info --> lever_input
         @smach.cb_interface(input_keys=['lever_input'])
         def lever_goal_cb(userdata, goal):
             global tic
@@ -306,12 +306,12 @@ def execute(goal):
 
 
         # 4A. 'RECOGNITION1'嵌套状态  ==>  'ARM_DETECT1'
-        # @描述：1号机械臂（右臂）运动至观测位置、再获得待操作面板相对于手臂末端的位置
+        # @描述：1号机械臂（右臂）运动至观测位置、再获得待操作面板相对于相机的pose
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> observe_input / icp_input
+        #       任务管理器下发的正则数组:       ud_operation_info --> observe_input / icp_input
         #       手臂之前所在观测位置:          ud_current_pose1  --> current_pose
         # @输出:                            局部userdata       --> 全局userdata
-        #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+        #       待操作面板相对于相机的pose:    pose_in_camera    --> ud_pose
         #       开关当前状态：                state             --> ud_status
         #       手臂之后所在观测位置:          current_pose      --> ud_current_pose1
         button_detect_1 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose1','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose1'])
@@ -319,7 +319,7 @@ def execute(goal):
             # 4A.1 'OBSERVE_POSITION'子状态  ==>  'YOLOICP'
             # @描述：1号机械臂到观测位置
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> observe_input
+            #       任务管理器下发的正则数组:  ud_operation_info --> observe_input
             #       手臂之前所在观测位置:      ud_current_pose1  --> current_pose
             # @输出:                        局部userdata       --> 全局userdata
             #       手臂运动后所在观测位置：   current_pose      --> ud_current_pose1
@@ -357,9 +357,9 @@ def execute(goal):
             # 4A.2 'YOLOICP'子状态
             # @描述：从本地table中，获取待操作面板相对于1号手臂末端的pose以及人工指定的开关状态
             # @输入：                           全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串:     ud_operation_info --> icp_input
+            #       任务管理器下发的正则数组:      ud_operation_info --> icp_input
             # @输出:                            局部userdata       --> 全局userdata
-            #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+            #       待操作面板相对于相机的pose:    pose_in_camera    --> ud_pose
             #       开关当前状态：                state             --> ud_status
             @smach.cb_interface(input_keys=['icp_input'])
             def icp_request_cb(userdata, request):
@@ -394,12 +394,12 @@ def execute(goal):
 
 
         # 5A. 'RECOGNITION2'嵌套状态  ==>  'ARM_DETECT2'
-        # @描述：2号机械臂（左臂）运动至观测位置、再获得待操作面板相对于手臂末端的位置
+        # @描述：2号机械臂（左臂）运动至观测位置、再获得待操作面板相对于相机的pose
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> observe_input / icp_input
+        #       任务管理器下发的正则数组:       ud_operation_info --> observe_input / icp_input
         #       手臂之前所在观测位置:          ud_current_pose2  --> current_pose
         # @输出:                            局部userdata       --> 全局userdata
-        #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+        #       待操作面板相对于相机的pose:    pose_in_camera    --> ud_pose
         #       开关当前状态：                state             --> ud_status
         #       手臂之后所在观测位置:          current_pose      --> ud_current_pose2
         button_detect_2 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose2','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose2'])
@@ -407,7 +407,7 @@ def execute(goal):
             # 5A.1 'OBSERVE_POSITION'子状态  ==>  'YOLOICP'
             # @描述：2号机械臂到观测位置
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> observe_input
+            #       任务管理器下发的正则数组:  ud_operation_info --> observe_input
             #       手臂之前所在观测位置:      ud_current_pose2  --> current_pose
             # @输出:                        局部userdata       --> 全局userdata
             #       手臂运动后所在观测位置：   current_pose      --> ud_current_pose2
@@ -445,9 +445,9 @@ def execute(goal):
             # 5A.2 'YOLOICP'子状态
             # @描述：从本地table中，获取待操作面板相对于2号手臂末端的pose以及人工指定的开关状态
             # @输入：                           全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串:     ud_operation_info --> icp_input
+            #       任务管理器下发的正则数组:      ud_operation_info --> icp_input
             # @输出:                            局部userdata       --> 全局userdata
-            #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+            #       待操作面板相对于相机的pose:    pose_in_camera    --> ud_pose
             #       开关当前状态：                state             --> ud_status
             @smach.cb_interface(input_keys=['icp_input'])
             def icp_request_cb(userdata, request):
@@ -482,12 +482,12 @@ def execute(goal):
 
 
         # 4B. 'RECOGNITION_WITH_SVM1'嵌套状态  ==>  'ARM_DETECT1'
-        # @描述：1号机械臂（右臂）运动至观测位置、再获得待操作面板相对于手臂末端的位置、最后通过SVM识别开关状态
+        # @描述：1号机械臂（右臂）运动至观测位置、再获得待操作面板相对于相机的pose、最后通过SVM识别开关状态
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> observe_input / icp_input / svm_input
+        #       任务管理器下发的正则数组:       ud_operation_info --> observe_input / icp_input / svm_input
         #       手臂之前所在观测位置:          ud_current_pose1  --> current_pose
         # @输出:                            局部userdata       --> 全局userdata
-        #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+        #       待操作面板相对于相机的pose:    pose_in_camera    --> ud_pose
         #       开关当前状态：                state             --> ud_status
         #       手臂之后所在观测位置:          current_pose      --> ud_current_pose1
         button_detect_with_svm1 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose1','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose1'])
@@ -495,7 +495,7 @@ def execute(goal):
             # 4B.1 'OBSERVE_POSITION'子状态  ==>  'YOLOICP'
             # @描述：1号机械臂到观测位置
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> observe_input
+            #       任务管理器下发的正则数组: ud_operation_info --> observe_input
             #       手臂之前所在观测位置:      ud_current_pose1  --> current_pose
             # @输出:                        局部userdata       --> 全局userdata
             #       手臂运动后所在观测位置：   current_pose      --> ud_current_pose1
@@ -529,10 +529,10 @@ def execute(goal):
 
             # 4B.2 'YOLOICP'子状态  ==>  'SVM'
             # @描述：从本地table中，获取待操作面板相对于手臂末端的pose以及人工指定的开关状态
-            # @输入：                           全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串:     ud_operation_info --> icp_input
-            # @输出:                            局部userdata       --> 全局userdata
-            #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+            # @输入：                          全局userdata       --> 局部userdata
+            #       任务管理器下发的正则数组:     ud_operation_info --> icp_input
+            # @输出:                           局部userdata       --> 全局userdata
+            #       待操作面板相对于相机的pose:   pose_in_camera    --> ud_pose
             @smach.cb_interface(input_keys=['icp_input'])
             def icp_request_cb(userdata, request):
                 actionFeedback.smach_info = 'icp detect started'
@@ -565,7 +565,7 @@ def execute(goal):
             # 4B.3 'SVM'子状态
             # @描述：调用开关状态检测模块，识别开关状态
             # @输入：                           全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串:     ud_operation_info --> svm_input
+            #       任务管理器下发的正则数组:      ud_operation_info --> svm_input
             # @输出:                            局部userdata       --> 全局userdata
             #       开关当前状态：                states             --> ud_status
             @smach.cb_interface(input_keys=['svm_input'])
@@ -601,12 +601,12 @@ def execute(goal):
 
 
         # 5B. 'RECOGNITION_WITH_SVM2'嵌套状态  ==>  'ARM_DETECT2'
-        # @描述：2号机械臂（左臂）运动至观测位置、再获得待操作面板相对于手臂末端的位置、最后通过SVM识别开关状态
+        # @描述：2号机械臂（左臂）运动至观测位置、再获得待操作面板相对于相机的pose、最后通过SVM识别开关状态
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> observe_input / icp_input / svm_input
+        #       任务管理器下发的正则数组:       ud_operation_info --> observe_input / icp_input / svm_input
         #       手臂之前所在观测位置:          ud_current_pose2  --> current_pose
         # @输出:                            局部userdata       --> 全局userdata
-        #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+        #       待操作面板相对于相机的pose:    pose_in_camera    --> ud_pose
         #       开关当前状态：                state             --> ud_status
         #       手臂之后所在观测位置:          current_pose      --> ud_current_pose2
         button_detect_with_svm2 = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_current_pose2','ud_operation_info'], output_keys=['ud_pose', 'ud_status','ud_current_pose2'])
@@ -614,7 +614,7 @@ def execute(goal):
             # 5B.1 'OBSERVE_POSITION'子状态  ==>  'YOLOICP'
             # @描述：1号机械臂到观测位置
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> observe_input
+            #       任务管理器下发的正则数组: ud_operation_info --> observe_input
             #       手臂之前所在观测位置:      ud_current_pose2  --> current_pose
             # @输出:                        局部userdata       --> 全局userdata
             #       手臂运动后所在观测位置：   current_pose      --> ud_current_pose2
@@ -646,10 +646,10 @@ def execute(goal):
 
             # 5B.2 'YOLOICP'子状态  ==>  'SVM'
             # @描述：从本地table中，获取待操作面板相对于手臂末端的pose以及人工指定的开关状态
-            # @输入：                           全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串:     ud_operation_info --> icp_input
-            # @输出:                            局部userdata       --> 全局userdata
-            #       待操作面板相对于手臂末端的pose: pose_in_camera    --> ud_pose
+            # @输入:                           全局userdata       --> 局部userdata
+            #       任务管理器下发的正则数组:     ud_operation_info --> icp_input
+            # @输出:                           局部userdata       --> 全局userdata
+            #       待操作面板相对于相机的pose:   pose_in_camera    --> ud_pose
             @smach.cb_interface(input_keys=['icp_input'])
             def icp_request_cb(userdata, request):
                 actionFeedback.smach_info = 'icp detect started'
@@ -682,7 +682,7 @@ def execute(goal):
             # 5B.3 状态识别
             # @描述：调用开关状态检测模块，识别开关状态
             # @输入：                           全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串:     ud_operation_info --> svm_input
+            #       任务管理器下发的正则数组:     ud_operation_info --> svm_input
             # @输出:                            局部userdata       --> 全局userdata
             #       开关当前状态：                states             --> ud_status
             @smach.cb_interface(input_keys=['svm_input'])
@@ -720,8 +720,8 @@ def execute(goal):
         # 6. 'ARM_DETECT2'状态  ==>  'TASK_MANAGER'
         # @描述：调用机械臂检测模块，2号机械臂执行检测任务
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> button_index
-        #       待操作面板相对于手臂末端的pose: ud_pose           --> pose_in_camera
+        #       任务管理器下发的正则数组:       ud_operation_info --> button_index
+        #       待操作面板相对于相机的pose:    ud_pose           --> pose_in_camera
         #       开关当前状态：                ud_status         --> button_state
         StateMachine.add('ARM_DETECT2', 
             SimpleActionState('manipulate_controller_iiwa2', ButtonManipulateAction, 
@@ -733,8 +733,8 @@ def execute(goal):
         # 7. 'ARM_DETECT1'状态  ==>  'RETURN_TO_ORIGIN1'（1号机械臂检测完即执行'回原位'状态，防止与2号碰撞）
         # @描述：调用机械臂检测模块，1号机械臂执行检测任务
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> button_index
-        #       待操作面板相对于手臂末端的pose: ud_pose           --> pose_in_camera
+        #       任务管理器下发的正则数组:       ud_operation_info --> button_index
+        #       待操作面板相对于相机的pose: ud_pose           --> pose_in_camera
         #       开关当前状态：                ud_status         --> button_state
         StateMachine.add('ARM_DETECT1', 
             SimpleActionState('manipulate_controller_iiwa1', ButtonManipulateAction, 
@@ -747,7 +747,7 @@ def execute(goal):
         # @描述：机械臂移动至观测位置（如有必要），调用显示屏检测模块，识别显示屏图像
         #       2号面板的数码管检测需要2号机械臂移动
         # @输入:                            全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> observe_input / image_input
+        #       任务管理器下发的正则数组:       ud_operation_info --> observe_input / image_input
         #       手臂之前所在观测位置:          ud_current_pose2  --> current_pose
         # @输出:                            局部userdata       --> 全局userdata
         #       手臂之后所在观测位置:          current_pose      --> ud_current_pose2
@@ -756,7 +756,7 @@ def execute(goal):
             # 8.1 'OBSERVE_POSITION'子状态  ==>  'DETECT_IMAGE'
             # @描述：若需要检测2号面板数码管，则2号机械臂需要运动到观测位置
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> observe_input
+            #       任务管理器下发的正则数组: ud_operation_info --> observe_input
             #       手臂之前所在观测位置:      ud_current_pose2  --> current_pose
             # @输出:                        局部userdata       --> 全局userdata
             #       手臂运动后所在观测位置：   current_pose      --> ud_current_pose2
@@ -798,7 +798,7 @@ def execute(goal):
             # 8.2 'DETECT_IMAGE'子状态
             # @描述：调用显示屏检测模块，识别显示屏图像
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> image_input
+            #       任务管理器下发的正则数组: ud_operation_info --> image_input
             @smach.cb_interface(input_keys=['image_input'])
             def image_request_cb(userdata, request):
                 actionFeedback.smach_info = 'image detect'
@@ -838,18 +838,18 @@ def execute(goal):
         # 9. 'SCREEN_RETURN'嵌套状态  ==>  'RECOGNITION2'
         # @描述：图像识别返回机械臂操作指令
         # @输入：                        全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串:     ud_operation_info --> observe_input / image_input
+        #       任务管理器下发的正则数组:       ud_operation_info --> observe_input / image_input
         #       手臂之前所在观测位置:          ud_current_pose2  --> current_pose
         # @输出:                            局部userdata       --> 全局userdata
         #       手臂之后所在观测位置:          current_pose      --> ud_current_pose2
-        #       发给机械臂执行的操作字符串:     image_return      --> ud_operation_info
+        #       发给机械臂执行的正则数组:       image_return      --> ud_operation_info
         image_detect_return = StateMachine(outcomes=['succeeded','aborted','preempted'], input_keys=['ud_operation_info', 'ud_current_pose2'], 
             output_keys=['ud_current_pose2', 'ud_operation_info'])
         with image_detect_return:
             # 9.1 'OBSERVE_POSITION'子状态  ==>  'DETECT_IMAGE_RETURN'
             # @描述：若需要检测2号面板数码管，则2号机械臂需要运动到观测位置
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> observe_input
+            #       任务管理器下发的正则数组:   ud_operation_info --> observe_input
             #       手臂之前所在观测位置:      ud_current_pose2  --> current_pose
             # @输出:                        局部userdata       --> 全局userdata
             #       手臂运动后所在观测位置：   current_pose      --> ud_current_pose2
@@ -890,11 +890,11 @@ def execute(goal):
 
 
             # 9.2 'DETECT_IMAGE_RETURN'子状态
-            # @描述：调用显示屏检测模块，识别2号面板的时间，并将数字按动顺序转为操作字符串，发给机械臂执行
+            # @描述：调用显示屏检测模块，识别2号面板的时间，并将数字按动顺序转为正则数组，发给机械臂执行
             # @输入：                       全局userdata       --> 局部userdata
-            #       任务管理器下发的操作字符串: ud_operation_info --> image_input
+            #       任务管理器下发的正则数组:   ud_operation_info --> image_input
             # @输出:                        局部userdata       --> 全局userdata
-            #       发给机械臂执行的操作字符串: image_return      --> ud_operation_info
+            #       发给机械臂执行的正则数组:   image_return      --> ud_operation_info
             @smach.cb_interface(input_keys=['image_input'])
             def image_request_cb(userdata, request):
                 actionFeedback.smach_info = 'image detect'
@@ -941,7 +941,7 @@ def execute(goal):
         # 10. 'LIGHT_DETECTION'状态  ==>  'TASK_MANAGER'
         # @描述：调用状态检测模块，识别按钮灯光
         # @输入：                        全局userdata       --> 局部userdata
-        #       任务管理器下发的操作字符串: ud_operation_info --> light_input
+        #       任务管理器下发的正则数组:   ud_operation_info --> light_input
         @smach.cb_interface(input_keys=['light_input'])
         def svm_request_cb(userdata, request):
             actionFeedback.smach_info = 'light detect started'
