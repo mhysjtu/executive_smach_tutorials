@@ -1,8 +1,11 @@
 <?xml version="1.0"?>
 <launch>
+    <!--首先运行此launch文件，才能运行示教器上的驱动程序-->
 
+    <!--设置iiwa参数，从而正确控制机械臂运动-->
     <param name = "/iiwa1/toolName" type="string" value = "ElectricGripperY"/>
     <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>
 
+    <!--开启人机界面-->
     <node name="hangdian_gui" pkg="hangdian_user_gui" type="pyqt5_test.py"/>
 </launch>

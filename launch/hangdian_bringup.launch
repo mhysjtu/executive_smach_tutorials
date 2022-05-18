@@ -1,14 +1,20 @@
 <?xml version="1.0"?>
 <launch>
+    <!--gui开启后，开启各系统模块-->
 
+    <!--1. 中央控制-->
     <include file="$(find smach_tutorials)/launch/setup.launch" />
 
+    <!--2. 各执行器驱动（需要提前配置好root权限，见文档：doc/固定USB端口方法.md）-->
     <include file="$(find smach_tutorials)/launch/actuator.launch" />
 
-    <!-- <include file="$(find smach_tutorials)/launch/arm.launch" /> -->
+    <!--3. 机械臂驱动（示教器程序运行成功且工具配置正确后，才能开启）-->
+    <include file="$(find smach_tutorials)/launch/arm.launch" />
 
-    <!-- <include file="$(find smach_tutorials)/launch/svm.launch" />
+    <!--4. 相机驱动+状态检测-->
+    <include file="$(find smach_tutorials)/launch/svm.launch" />
 
-    <include file="$(find smach_tutorials)/launch/screen.launch" /> -->
+    <!--5. usb驱动+图像检测（需要固定usb序号，见文档：doc/固定USB端口方法.md）-->
+    <include file="$(find smach_tutorials)/launch/screen.launch" />
 
 </launch>

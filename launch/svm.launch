@@ -1,13 +1,14 @@
 <?xml version="1.0"?>
 <launch>
+    <!--4. 相机驱动+状态检测-->
 
+    <!--开启深度相机驱动（序列号需确认）-->
     <include file="$(find realsense2_camera)/launch/rs_multiple_devices.launch" >
         <arg name="serial_no_camera1"     value="637202001815"/>
         <arg name="serial_no_camera2"     value="636204004145"/>
     </include>
-    <include file="$(find usb_cam)/launch/usb_cam-test1.launch" />
-    <include file="$(find usb_cam)/launch/usb_cam-test2.launch" />
     
+    <!--开启svm与halcon两种状态检测service-->
     <node name="state_halcon_service" pkg="svm_halcon" type="svm_halcon_node" output="screen"/>
     <node name="state_service" pkg="hangdian" type="svmtest.py" output="screen"/>
 

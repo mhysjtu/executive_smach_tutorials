@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+    <!--调试机械臂检测与操纵杆检测时使用；仅开gui与此launch文件即可-->
 
     <param name = "/iiwa1/toolName" type="string" value = "ElectricGripperY"/>
     <param name = "/iiwa2/toolName" type="string" value = "ElectricGripperY"/>

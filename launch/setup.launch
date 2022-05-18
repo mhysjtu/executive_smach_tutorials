@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <launch>
+    <!--1. 中央控制-->
 
+    <!--发布标定结果；空service节点用于记录机械臂位置-->
     <node name="publish_eye_in_hand" pkg="calibration" type="publish_eye_in_hand"/>
     <node name="empty_service" pkg="smach_tutorials" type="empty_service_node.py" />
 
+    <!--打开中央控制service与操作参数发布service-->
     <node name="task_manager" pkg="task_parser" type="task_parser_node" output="screen" />
     <node name="local_table_node" pkg="local_table" type="local_table_node" output="screen"/>
     

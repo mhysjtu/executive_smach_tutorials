@@ -1,9 +1,12 @@
 <?xml version="1.0"?>
 <launch>
+    <!--3. 机械臂驱动-->
 
+    <!--开启机械臂执行操作的驱动（action）-->
     <!-- <node name="iiwa1_manipulate_server_node" pkg="manipu_button" type="iiwa1_manipulate_server_node" output="screen" /> -->
     <node name="iiwa2_manipulate_server_node" pkg="manipu_button" type="iiwa2_manipulate_server_node" output="screen" />
 
+    <!--开启机械臂在各观测位置之间运动的驱动（action）-->
     <!-- <node name="simple_move_iiwa1" pkg="observe_move" type="simple_move_iiwa1" output="screen"/> -->
     <node name="simple_move_iiwa2" pkg="observe_move" type="simple_move_iiwa2" output="screen"/>
 
